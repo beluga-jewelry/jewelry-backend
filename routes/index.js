@@ -69,7 +69,7 @@ router.get('/order-sale', async (req,res) => {
   res.send(await postCollections.find({}).toArray())
 });
 
-router.get('/:gender/:type', async (req,res) => {
+router.get('/items/:gender/:type', async (req,res) => {
   const postCollections = await loadCollections("product_dim")
   var data = await postCollections.find({"gender": req.params.gender, "type": req.params.type}).toArray();
   res.send(data)  
@@ -80,11 +80,11 @@ router.get('/new', async (req,res) => {
   const productCollections = await db.collection("product_dim")
   const storeCollections = await db.collection("store")
   const dateCollections = await  db.collection("date_dim")
-  var todayDate = new Date()
+  var curDate = new Date()
   var dateData = await dateCollections.find({ 
     stock_date : { 
-      $lte: todayDate, 
-      $gte: new Date(new Date().setDate(todayDate.getDate()-30))
+      $lte: curDate, 
+      $gte: new Date(new Date().setMonth(curDate.getMonth()-1))
     }   
 }).project({_id: 1}).toArray()
 var dateTemp = [];
@@ -99,6 +99,7 @@ for (let i = 0; i < len; i++) {
     storeTemp[i] = store[i].product_id
   }
   var product = await productCollections.find({_id: {$in: storeTemp}}).toArray()
+  
   res.send(product)  
 });
 
