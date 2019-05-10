@@ -120,50 +120,101 @@ router.get('/promotion/store', async (req,res) => {
     }
   }).toArray()
 
-
   var promoTemp = [];
-var len = promotionData.length
-for (let i = 0; i < len; i++) {
+  var len = promotionData.length
+  for (let i = 0; i < len; i++) {
   promoTemp[i] = promotionData[i]._id
-}
-var store = await storeCollections.find({promotion_id: { $in: promoTemp }}).project({product_id:1}).toArray()
-var store2 = await storeCollections.find({promotion_id: { $in: promoTemp }}).toArray()
+  }
+  var store = await storeCollections.find({promotion_id: { $in: promoTemp }}).project({product_id:1}).toArray()
+  var store2 = await storeCollections.find({promotion_id: { $in: promoTemp }}).toArray()
 
-var storeTemp = [];
-var promoId = []
-var len2 = store.length
-for (let i = 0; i < len2; i++) {
-  storeTemp[i] = store[i].product_id
-}
-var product = await productCollections.find({_id: {$in: storeTemp}}).toArray()
+  var storeTemp = [];
+  var promoId = []
+  var len2 = store.length
+  for (let i = 0; i < len2; i++) {
+    storeTemp[i] = store[i].product_id
+  }
+  var product = await productCollections.find({_id: {$in: storeTemp}}).toArray()
 
-var sendArray = []
-var len3 = product.length
-let i = 0, k = 0;
-while(k < len3){
-  if(store[i].product_id == product[k]._id){
-    promoId[k] = store2[i]['promotion_id']
-    var promoSet = await promoCollections.findOne({_id:ObjectId(promoId[k])});
-  sendArray[k] = { "_id": product[i]['id'],
-  "name": product[k]['name'],
-  "type": product[k]['type'],
-  "material": product[k]['material'],
-  "gender": product[k]['gender'],
-  "color": product[k]['color'],
-  "price": product[k]['price'],
-  "image":product[k]['image'],
-  "promotion_name": promoSet['promotion_name'],
-  "quantity":promoSet['quantity'],
-  "discount":promoSet['discount'],
-  }  
-    k++;
+  var sendArray = []
+  var len3 = product.length
+  let i = 0, k = 0;
+  while(k < len3){
+    if(store[i].product_id == product[k]._id){
+      promoId[k] = store2[i]['promotion_id']
+      var promoSet = await promoCollections.findOne({_id:ObjectId(promoId[k])});
+      sendArray[k] = { "_id": product[i]['id'],
+      "name": product[k]['name'],
+      "type": product[k]['type'],
+      "material": product[k]['material'],
+      "gender": product[k]['gender'],
+      "color": product[k]['color'],
+      "price": product[k]['price'],
+      "image":product[k]['image'],
+      "promotion_name": promoSet['promotion_name'],
+      "quantity":promoSet['quantity'],
+      "discount":promoSet['discount'],
+    }  
+      k++;
     }
-  i++;
-  if(i >= len2) i = 0;
-}
+    i++;
+    if(i >= len2) i = 0;
+  }
 
-res.send(sendArray)  
+  res.send(sendArray)  
 })
+
+router.get('/admin/stock', async (req,res) => {
+  const db = await loadDataBase()
+  const productCollections = await db.collection("product_dim")
+  const storeCollections = await db.collection("store")
+  const dateCollections = await  db.collection("date_dim")
+  var curDate = new Date()
+  var dateData = await dateCollections.find({ 
+    sale_date : { $exists: false }
+}).project({_id: 1}).toArray()
+var dateTemp = [];
+var len = dateData.length
+for (let i = 0; i < len; i++) {
+  dateTemp[i] = dateData[i]._id
+}
+  var store = await storeCollections.find({date_id: { $in: dateTemp }}).project({product_id:1}).toArray()
+  var storeTemp = [];
+  var len2 = store.length
+  for (let i = 0; i < len2; i++) {
+    storeTemp[i] = store[i].product_id
+  }
+  var product = await productCollections.find({_id: {$in: storeTemp}}).toArray()
+  
+  res.send(product)  
+})
+
+// router.get('/admin/report/daily', async (req,res) => {
+//   const db = await loadDataBase()
+//   const productCollections = await db.collection("product_dim")
+//   const storeCollections = await db.collection("store")
+//   const dateCollections = await  db.collection("date_dim")
+//   var curDate = new Date()
+//   var dateData = await dateCollections.find({ 
+//     sale_date : { $exists: false }
+// }).project({_id: 1}).toArray()
+// var dateTemp = [];
+// var len = dateData.length
+// for (let i = 0; i < len; i++) {
+//   dateTemp[i] = dateData[i]._id
+// }
+//   var store = await storeCollections.find({date_id: { $in: dateTemp }}).project({product_id:1}).toArray()
+//   var storeTemp = [];
+//   var len2 = store.length
+//   for (let i = 0; i < len2; i++) {
+//     storeTemp[i] = store[i].product_id
+//   }
+//   var product = await productCollections.find({_id: {$in: storeTemp}}).toArray()
+  
+//   res.send(product)  
+// })
+
+
 
 /*
 *load collection 
