@@ -73,7 +73,7 @@ router.get('/order-sale', async (req,res) => {
   res.send(await postCollections.find({}).toArray())
 });
 
-router.get('/items/:gender/:type', async (req,res) => {
+router.get('/product/:gender/:type', async (req,res) => {
   const postCollections = await loadCollections("product_dim")
   var data = await postCollections.find({"gender": req.params.gender, "type": req.params.type}).toArray();
   res.send(data)  
@@ -81,169 +81,160 @@ router.get('/items/:gender/:type', async (req,res) => {
 
 router.get('/new', async (req,res) => {
   const db = await loadDataBase()
-  const productCollections = await db.collection("product_dim")
   const storeCollections = await db.collection("store")
-  const dateCollections = await  db.collection("date_dim")
   var curDate = new Date()
-  var dateData = await dateCollections.find({ 
-    stock_date : { 
-      $lte: curDate, 
-      $gte: new Date(new Date().setMonth(curDate.getMonth()-1))
-    }   
-}).toArray()
-var dateTemp = [];
-var len = dateData.length
-for (let i = 0; i < len; i++) {
-  dateTemp[i] = dateData[i]._id
-}
-  var store = await storeCollections.find({date_id: { $in: dateTemp }}).project({product_id:1}).toArray()
-  var storeTemp = [];
-  var len2 = store.length
-  for (let i = 0; i < len2; i++) {
-    storeTemp[i] = store[i].product_id
-  }
-  var product = await productCollections.find({_id: {$in: storeTemp}}).toArray()
-  
-  res.send(product)  
-});
+  const storeArray = await storeCollections.aggregate([
+    {$lookup:{
+      from: "product_dim",
+      localField: "product_id",   // name of users table field
+      foreignField: "_id", // name of userinfo table field
+      as: "product_info"    
+      }
+    },{$unwind: "$product_info"},
+
+    {$lookup:{
+      from: "date_dim",
+      localField: "date_id",   // name of users table field
+      foreignField: "_id", // name of userinfo table field
+      as: "date_info"    
+      }
+    },{$unwind: "$date_info"},
+    {$match:{ 
+      "date_info.stock_date" : { 
+        $lte: curDate, 
+        $gte: new Date(new Date().setMonth(curDate.getMonth()-1))
+      }  
+    }
+    }
+  ]).project({
+    "_id": 1,
+    "project_id": "$product_info._id",
+    "date_id": "$date_info._id",
+    "name": "$product_info.name",
+    "type": "$product_info.type",
+    "material": "$product_info.meterial",
+    "gender": "$product_info.gender",
+    "color": "$product_info.color",
+    "price": "$product_info.price",
+    "image": "$product_info.image",
+  }).toArray();
+  res.send(storeArray);
+})
 
 router.get('/promotion/store', async (req,res) => {
   const db = await loadDataBase()
-  const productCollections = await db.collection("product_dim")
   const storeCollections = await db.collection("store")
-  const promoCollections = await db.collection("promotion_dim")
+  const storeArray = await storeCollections.aggregate([
+      {$lookup:{
+        from: "product_dim",
+        localField: "product_id",   // name of users table field
+        foreignField: "_id", // name of userinfo table field
+        as: "product_info"    
+        }
+      },{$unwind: "$product_info"},
 
-  var promotionData = await promoCollections.find({ 
-    begin_date:{
-      $lte: new Date()
-    },
-    end_date: { 
-      $gte: new Date()
-    }
-  }).toArray()
-
-  var promoTemp = [];
-  var len = promotionData.length
-  for (let i = 0; i < len; i++) {
-  promoTemp[i] = promotionData[i]._id
-  }
-  var store = await storeCollections.find({promotion_id: { $in: promoTemp }}).project({product_id:1}).toArray()
-  var store2 = await storeCollections.find({promotion_id: { $in: promoTemp }}).toArray()
-
-  var storeTemp = [];
-
-  var len2 = store.length
-  for (let i = 0; i < len2; i++) {
-    storeTemp[i] = store[i].product_id
-  }
-  var product = await productCollections.find({_id: {$in: storeTemp}}).toArray()
-
-  var sendArray = []
-  var len3 = product.length
-  let i = 0, k = 0;
-  while(k < len3){
-    if(store[i].product_id == product[k]._id){
-      let promoSet = await promoCollections.findOne({_id:ObjectId(store2[i]['promotion_id'])});
-      sendArray[k] = { 
-        "_id": product[k]['_id'],
-      "name": product[k]['name'],
-      "type": product[k]['type'],
-      "material": product[k]['material'],
-      "gender": product[k]['gender'],
-      "color": product[k]['color'],
-      "price": product[k]['price'],
-      "image":product[k]['image'],
-      "promotion_name": promoSet['promotion_name'],
-      "quantity":promoSet['quantity'],
-      "discount":promoSet['discount'],
-    }  
-      k++;
-    }
-    i++;
-    if(i >= len2) i = 0;
-  }
-
-  res.send(sendArray)  
-})
+      {$lookup:{
+        from: "promotion_dim",
+        localField: "promotion_id",   // name of users table field
+        foreignField: "_id", // name of userinfo table field
+        as: "promotion_info"    
+        }
+      },{$unwind: "$promotion_info"},
+    ]).project({
+      "_id": 1,
+      "project_id": "$product_info._id",
+      "promotion_id": "$promotion_info._id",
+      "name": "$product_info.name",
+      "type": "$product_info.type",
+      "material": "$product_info.meterial",
+      "gender": "$product_info.gender",
+      "color": "$product_info.color",
+      "price": "$product_info.price",
+      "image": "$product_info.image",
+      "promotion_name": "$promotion_info.promotion_name",
+      "quantity": "$promotion_info.quantity",
+      "discount": "$promotion_info.discount"
+    }).toArray();
+    res.send(storeArray);
+});
 
 router.get('/admin/stock', async (req,res) => {
   const db = await loadDataBase()
-  const productCollections = await db.collection("product_dim")
   const storeCollections = await db.collection("store")
-  const dateCollections = await  db.collection("date_dim")
-  var dateData = await dateCollections.find({ 
-      sale_date : { $exists: false }
-  }).toArray()
-  var dateTemp = [];
-    var len = dateData.length
-  for (let i = 0; i < len; i++) {
-    dateTemp[i] = dateData[i]._id
-  }
-  var store = await storeCollections.find({date_id: { $in: dateTemp }}).project({product_id:1}).toArray()
-  var storeTemp = [];
-  var len2 = store.length
-  for (let i = 0; i < len2; i++) {
-    storeTemp[i] = store[i].product_id
-  }
-  var product = await productCollections.find({_id: {$in: storeTemp}}).toArray()
-  
-  res.send(product)  
+  const storeArray = await storeCollections.aggregate([
+    {$lookup:{
+      from: "product_dim",
+      localField: "product_id",   // name of users table field
+      foreignField: "_id", // name of userinfo table field
+      as: "product_info"    
+      }
+    },{$unwind: "$product_info"},
+
+    {$lookup:{
+      from: "date_dim",
+      localField: "date_id",   // name of users table field
+      foreignField: "_id", // name of userinfo table field
+      as: "date_info"    
+      }
+    },{$unwind: "$date_info"},
+    {$match:{ 
+      "date_info.sale_date" : { $exists: false } 
+    }
+    }
+  ]).project({
+    "_id": 1,
+    "project_id": "$product_info._id",
+    "date_id": "$date_info._id",
+    "name": "$product_info.name",
+    "type": "$product_info.type",
+    "material": "$product_info.meterial",
+    "gender": "$product_info.gender",
+    "color": "$product_info.color",
+    "price": "$product_info.price",
+    "image": "$product_info.image",
+    "stock_date": "$date_info.stock_date"
+  }).toArray();
+  res.send(storeArray);
 })
-
-
-
 
 router.get('/admin/report', async (req,res) => {
   const db = await loadDataBase()
-  const productCollections = await db.collection("product_dim")
   const storeCollections = await db.collection("store")
-  const dateCollections = await  db.collection("date_dim")
-  var dateData = await dateCollections.find({ 
-    sale_date : { $exists: true , $lt: new Date()}
-  }).toArray()
-  
-  var dateTemp = [];
-  var len = dateData.length
-  for (let i = 0; i < len; i++) {
-    dateTemp[i] = dateData[i]._id
-  }
-  var store = await storeCollections.find({date_id: { $in: dateTemp }}).project({product_id:1}).toArray()
-  var store2 = await storeCollections.find({date_id: { $in: dateTemp }}).toArray()
-  
-  var storeTemp = [];
-  var len2 = store.length
-  for (let i = 0; i < len2; i++) {
-    storeTemp[i] = store[i].product_id
-  }
-  var product = await productCollections.find({_id: {$in: storeTemp}}).toArray()
-  
-  var sendArray = []
-  var len3 = product.length
-  let i = 0, k = 0;
-  while(k < len3){
-    if(store[i].product_id == product[k]._id){
-      let dateSet = await dateCollections.findOne({_id:store2[i]['date_id']});
-      sendArray[k] = { 
-        "_id": product[k]['_id'],
-      "name": product[k]['name'],
-      "type": product[k]['type'],
-      "material": product[k]['material'],
-      "gender": product[k]['gender'],
-      "color": product[k]['color'],
-      "price": product[k]['price'],
-      "image":product[k]['image'],
-      "sale_date": dateSet['sale_date']
-    }  
-      k++;
+  const storeArray = await storeCollections.aggregate([
+    {$lookup:{
+      from: "product_dim",
+      localField: "product_id",   // name of users table field
+      foreignField: "_id", // name of userinfo table field
+      as: "product_info"    
+      }
+    },{$unwind: "$product_info"},
+
+    {$lookup:{
+      from: "date_dim",
+      localField: "date_id",   // name of users table field
+      foreignField: "_id", // name of userinfo table field
+      as: "date_info"    
+      }
+    },{$unwind: "$date_info"},
+    {$match:{ 
+      "date_info.sale_date" : { $exists: true , $lt: new Date()}
     }
-    i++;
-    if(i >= len2) i = 0;
-  }
-
-  res.send(sendArray)  
+    }
+  ]).project({
+    "_id": 1,
+    "project_id": "$product_info._id",
+    "date_id": "$date_info._id",
+    "name": "$product_info.name",
+    "type": "$product_info.type",
+    "material": "$product_info.meterial",
+    "gender": "$product_info.gender",
+    "color": "$product_info.color",
+    "price": "$product_info.price",
+    "image": "$product_info.image",
+    "sale_date": "$date_info.sale_date"
+  }).toArray();
+  res.send(storeArray);
 })
-
-
 
 /*
 *load collection 
