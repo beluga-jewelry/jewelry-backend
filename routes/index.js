@@ -91,7 +91,10 @@ router.get('/product/:gender/:type', async (req,res) => {
         foreignField: "_id", // name of userinfo table field
         as: "promotion_info"    
         }
-      },{$unwind: "$promotion_info"},
+      },{$unwind: {
+        path:"$promotion_info",
+      preserveNullAndEmptyArrays: true
+    }},
       {$match:{
         "product_info.gender": req.params.gender, 
         "product_info.type": req.params.type
@@ -141,7 +144,11 @@ router.get('/new', async (req,res) => {
       foreignField: "_id", // name of userinfo table field
       as: "promotion_info"    
       }
-    },{$unwind: "$promotion_info"},
+    },{$unwind: {
+      path:"$promotion_info",
+    preserveNullAndEmptyArrays: true
+  }
+  },
 
     
     {$match:{ 
