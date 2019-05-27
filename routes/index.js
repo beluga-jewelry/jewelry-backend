@@ -134,6 +134,16 @@ router.get('/new', async (req,res) => {
       as: "date_info"    
       }
     },{$unwind: "$date_info"},
+
+    {$lookup:{
+      from: "promotion_dim",
+      localField: "promotion_id",   // name of users table field
+      foreignField: "_id", // name of userinfo table field
+      as: "promotion_info"    
+      }
+    },{$unwind: "$promotion_info"},
+
+    
     {$match:{ 
       "date_info.stock_date" : { 
         $lte: curDate, 
@@ -152,7 +162,10 @@ router.get('/new', async (req,res) => {
     "color": "$product_info.color",
     "price": "$product_info.price",
     "image": "$product_info.image",
-    "quantity":1
+    "quantity":1,
+    "promotion_name": "$promotion_info.promotion_name",
+    "promotion_quantity": "$promotion_info.quantity",
+    "discount": "$promotion_info.discount"
   }).toArray();
   res.send(storeArray);
 })
