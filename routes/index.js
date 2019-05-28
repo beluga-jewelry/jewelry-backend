@@ -47,11 +47,6 @@ router.get('/order', async (req,res) => {
   res.send(await postCollections.find({}).toArray())
 });
 
-router.get('/order-sale', async (req,res) => {
-  const postCollections = await loadCollections("order_sale")
-  res.send(await postCollections.find({}).toArray())
-});
-
 router.get('/product', async (req,res) => {
   const postCollections = await loadCollections("product_dim")
   res.send(await postCollections.find({}).toArray())
