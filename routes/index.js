@@ -401,8 +401,8 @@ router.get('/admin/report/month', async (req,res) => {
 })
 
 router.get('/admin/report/month/:month', async (req,res) => {
-  var start = new Date(new Date().getFullYear(), parseInt(req.params.month)-1, 1);
-  var end = new Date(new Date().getFullYear(), parseInt(req.params.month), 30);
+  var start = new Date(new Date().getFullYear(), parseInt(req.params.month)-1, 2);
+  var end = new Date(new Date().getFullYear(), parseInt(req.params.month)-1, 31);
   const db = await loadDataBase()
   const storeCollections = await db.collection("order")
   const storeArray = await storeCollections.aggregate([
@@ -414,7 +414,7 @@ router.get('/admin/report/month/:month', async (req,res) => {
       }
     },{$unwind: "$product_info"},
     {$match:{ 
-      "sale_date" : {$gt: start, $lte: end}
+      "sale_date" : {$gte: start, $lte: end}
     }
     }
   ]).project({
@@ -485,6 +485,7 @@ router.get('/admin/report/year/:year', async (req,res) => {
   }).toArray();
   res.send(storeArray);
 })
+
 router.get('/admin/history', async (req,res) => {
   const db = await loadDataBase()
   const storeCollections = await db.collection("store")
@@ -567,6 +568,7 @@ router.get('/customer/order', async (req,res) => {
 
 router.post('/user/order', async (req,res) => {
   var data = req.body;
+  
   const db = await loadDataBase();
   const orderCollection = await db.collection("order")
   const storeCollection = await db.collection("store")
