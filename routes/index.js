@@ -568,11 +568,10 @@ router.get('/customer/order', async (req,res) => {
 
 router.post('/user/order', async (req,res) => {
   var data = req.body;
-  
   const db = await loadDataBase();
   const orderCollection = await db.collection("order")
   const storeCollection = await db.collection("store")
-  await storeCollection.updateOne({product_id: data.product_id}, { $inc: { quantity: -1}})
+  await storeCollection.updateOne({product_id: data.product_id}, { $inc: { quantity: -(data.quantity)}})
   await orderCollection.insertOne(data)
   res.send(await orderCollection.find({}).toArray());
 });
