@@ -571,7 +571,9 @@ router.post('/user/order', async (req,res) => {
   const db = await loadDataBase();
   const orderCollection = await db.collection("order")
   const storeCollection = await db.collection("store")
+  const promotionCollection = await db.collection("promotion_dim")
   await storeCollection.updateOne({product_id: data.product_id}, { $inc: { quantity: -(data.quantity)}})
+  await promotionCollection.updateOne({_id: new ObjectId(data.promotion_id)}, { $inc: { used_amount: data.quantity}})
   data.customer_id = new ObjectId(data.customer_id)
   data.sale_date = new Date(data.sale_date)
   await orderCollection.insertOne(data)
